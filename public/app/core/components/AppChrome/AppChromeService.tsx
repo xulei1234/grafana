@@ -6,6 +6,7 @@ import { t } from '@grafana/i18n';
 import { config, locationService, reportInteraction } from '@grafana/runtime';
 import { appEvents } from 'app/core/app_events';
 import { isShallowEqual } from 'app/core/utils/isShallowEqual';
+import { CUSTOM_KIOSK_PARAM_LIST } from 'app/features/dashboard-scene/utils/customKioskTypes';
 import { KioskMode } from 'app/types/dashboard';
 
 import { RouteDescriptor } from '../../navigation/types';
@@ -171,7 +172,8 @@ export class AppChromeService {
 
   public exitKioskMode() {
     this.update({ kioskMode: undefined });
-    locationService.partial({ kiosk: null });
+    const customParamsToClear = Object.fromEntries(CUSTOM_KIOSK_PARAM_LIST.map((key) => [key, null]));
+    locationService.partial({ kiosk: null, ...customParamsToClear });
     reportInteraction('grafana_kiosk_mode', {
       action: 'exit',
     });
@@ -183,6 +185,7 @@ export class AppChromeService {
     switch (kiosk) {
       case '1':
       case true:
+      case '': // align with DashboardScenePage.tsx:119 three-state kiosk detection
         newKioskMode = KioskMode.Full;
     }
 

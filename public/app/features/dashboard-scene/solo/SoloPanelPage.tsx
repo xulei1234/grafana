@@ -16,6 +16,7 @@ import { DashboardRoutes } from 'app/types/dashboard';
 import { getDashboardScenePageStateManager } from '../pages/DashboardScenePageStateManager';
 import { DashboardScene } from '../scene/DashboardScene';
 import { SoloPanelContextProvider, useDefineSoloPanelContext } from '../scene/SoloPanelContext';
+import { useCustomKiosk } from '../utils/useCustomKiosk';
 
 import { SoloPanelPageLogo } from './SoloPanelPageLogo';
 
@@ -79,6 +80,7 @@ export function SoloPanelRenderer({
   const soloPanelContext = useDefineSoloPanelContext(panelId)!;
   const [isHovered, setIsHovered] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { resolved } = useCustomKiosk();
 
   useEffect(() => {
     const dashDeactivate = dashboard.activate();
@@ -97,7 +99,11 @@ export function SoloPanelRenderer({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <SoloPanelPageLogo containerRef={containerRef} isHovered={isHovered} hideLogo={hideLogo} />
+      <SoloPanelPageLogo
+        containerRef={containerRef}
+        isHovered={isHovered}
+        hideLogo={hideLogo || resolved.hideKioskFooter}
+      />
       {renderHiddenVariables(dashboard)}
       <div className={styles.panelWrapper}>
         <SoloPanelContextProvider value={soloPanelContext} dashboard={dashboard} singleMatch={true}>

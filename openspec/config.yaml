@@ -1,0 +1,71 @@
+# OpenSpec 项目配置文件
+
+schema: spec-driven
+constitution: docs/constitution.md
+
+context: |
+  语言：简体中文（结构性关键词保留英文：ADDED/MODIFIED/REMOVED、MUST/SHALL、GIVEN/WHEN/THEN）
+  项目类型：Web 前端（SPA/SSR，按仓库实际：Vite 或 Next.js）
+
+  技术栈：
+  - TypeScript（strict=true）
+  - React（函数式组件优先）
+  - 路由：React Router / Next App Router（以项目实际为准）
+  - 状态管理：React Query + Zustand
+  - 样式：CSS Modules / Tailwind（以项目实际为准）
+
+  工程约束：
+  - ESLint + Prettier（提交前必须通过）
+  - 不允许引入未经批准的大型依赖（新增依赖需在 proposal 说明）
+  - 与后端契约：OpenAPI/Swagger 或 docs/api.md
+
+  质量与体验：
+  - 必须覆盖 Loading/Empty/Error 三态
+  - 可访问性：关键交互必须满足基础 a11y（键盘可用、aria-label）
+  - 性能：避免不必要的全量重渲染；首屏/核心路径需关注 bundle 体积与请求数
+
+  测试：
+  - 单元：Vitest/Jest
+  - 组件：React Testing Library
+  - E2E：Playwright/Cypress
+
+rules:
+  proposal:
+    - 必须写清楚：用户价值、In Scope/Out of Scope、影响页面/路由、是否影响接口契约、灰度/回滚方案。
+    - 如涉及埋点/指标，proposal 必须列出事件名、触发时机、关键属性（不要推迟到实现代码里）。
+    - 如引入新依赖或修改构建配置，proposal 必须说明原因、替代方案、风险与回滚。
+
+  specs:
+    - Delta specs 必须使用：## ADDED/MODIFIED/REMOVED/RENAMED Requirements；每条 Requirement 至少 1 个 Scenario。
+    - Scenario 必须覆盖：正常路径 + 异常/错误态 + 边界（如空数据、无权限、网络失败、超时）。
+    - UI 相关场景必须明确：Loading/Empty/Error 的呈现、交互禁用规则、表单校验提示文案来源。
+    - 如涉及分页/筛选/排序，Scenario 必须定义默认值、参数同步（URL/本地状态）、以及重置行为。
+    - 如涉及兼容性，明确支持的浏览器范围与降级策略。
+
+  design:
+    - 必须包含：组件/模块边界、状态流（Server State vs Client State）、关键数据结构/类型、与 API 的契约映射。
+    - 必须说明：错误处理策略（toast/banner/inline）、重试策略、以及对现有页面/组件的复用点。
+    - 复杂交互需给出：页面状态机或事件流（文字即可，必要时用伪图/序列描述）。
+    - 如涉及性能：说明缓存策略（React Query key/invalidations）、渲染优化点、bundle 影响评估。
+    - 如涉及 a11y/i18n：说明标准（aria、键盘导航、文案国际化键）。
+
+  tasks:
+    - tasks 必须是可勾选的 - [ ] 清单，按依赖顺序拆分：契约/类型 -> 业务逻辑 -> UI -> 测试 -> 文档/埋点。
+    - 必须包含测试任务：至少单测或组件测；关键路径必须包含 E2E 或明确人工验收步骤。
+    - 必须包含回归任务：列出受影响页面与关键场景回归点。
+    - 如改动 API：必须包含更新 API 类型/客户端代码与契约校验（如 OpenAPI 校验或 mock 更新）。
+
+validation:
+  commands:
+    - "npm run lint"            # ESLint 检查
+    - "npm run type-check"      # TypeScript 检查
+    - "npm run test"            # 执行前端测试
+    - "npm run format:check"    # Prettier 必须检查通过
+  optional_commands:
+    - "npm run build"           # CI环境可以执行 build 防止打包失败
+
+completion_criteria:
+  - "代码校验红线通过：无 ESLint 错误，强类型验证通过，无隐式 ANY。"
+  - "UI 三大基础状态 (Loading/Empty/Error) 在实现中均已被正确处理被反馈给用户。"
+  - "任务拆分中的单测、组件测试及回测任务均已被勾选完成。"
+  - "所有 OpenSpec 工作流产物更新与实际代码演进对齐。"

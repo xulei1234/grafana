@@ -85,6 +85,7 @@ describe('DashboardControls', () => {
       it('should return FALSE if no controls are available', () => {
         const scene = buildTestScene({
           hideTimeControls: true,
+          hideRefreshControls: true,
           hideVariableControls: true,
           hideLinksControls: true,
           hideDashboardControls: true,
@@ -117,6 +118,7 @@ describe('DashboardControls', () => {
     it('should render with hidden controls', async () => {
       const scene = buildTestScene({
         hideTimeControls: true,
+        hideRefreshControls: true,
         hideVariableControls: true,
         hideLinksControls: true,
         hideDashboardControls: true,
@@ -138,6 +140,7 @@ describe('DashboardControls', () => {
         }),
         controls: new DashboardControls({
           hideTimeControls: true,
+          hideRefreshControls: true,
           hideVariableControls: true,
           hideLinksControls: true,
           hideDashboardControls: true,
@@ -225,6 +228,7 @@ describe('DashboardControls', () => {
       // @ts-expect-error
       expect(scene._urlSync.getKeys()).toEqual([
         '_dash.hideTimePicker',
+        '_dash.hideRefreshPicker',
         '_dash.hideVariables',
         '_dash.hideLinks',
         '_dash.hideDashboardControls',
@@ -252,6 +256,7 @@ describe('DashboardControls', () => {
         '_dash.hideDashboardControls': 'true',
       });
       expect(scene.state.hideTimeControls).toBeTruthy();
+      expect(scene.state.hideRefreshControls).toBeTruthy(); // backward compat: hideTimePicker also sets hideRefreshControls
       expect(scene.state.hideVariableControls).toBeTruthy();
       expect(scene.state.hideLinksControls).toBeTruthy();
       expect(scene.state.hideDashboardControls).toBeTruthy();
@@ -262,6 +267,7 @@ describe('DashboardControls', () => {
         '_dash.hideDashboardControls': '',
       });
       expect(scene.state.hideTimeControls).toBeTruthy();
+      expect(scene.state.hideRefreshControls).toBeTruthy();
       expect(scene.state.hideVariableControls).toBeTruthy();
       expect(scene.state.hideLinksControls).toBeTruthy();
       expect(scene.state.hideDashboardControls).toBeTruthy();
@@ -284,6 +290,7 @@ describe('DashboardControls', () => {
     it('should not call setState if no changes', () => {
       const scene = buildTestScene({
         hideTimeControls: true,
+        hideRefreshControls: true,
         hideVariableControls: true,
         hideLinksControls: true,
         hideDashboardControls: true,

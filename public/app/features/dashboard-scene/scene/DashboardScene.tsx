@@ -28,6 +28,7 @@ import {
   SceneVariable,
   SceneVariableDependencyConfigLike,
   VizPanel,
+  VizPanelMenu,
 } from '@grafana/scenes';
 import { Dashboard, DashboardLink, LibraryPanel } from '@grafana/schema';
 import { Spec as DashboardV2Spec } from '@grafana/schema/apis/dashboard.grafana.app/v2';
@@ -86,6 +87,7 @@ import { dashboardSceneGraph } from '../utils/dashboardSceneGraph';
 import { djb2Hash } from '../utils/djb2Hash';
 import { getDashboardUrl } from '../utils/getDashboardUrl';
 import { DashboardInteractions } from '../utils/interactions';
+import { computeCustomKioskState } from '../utils/useCustomKiosk';
 import {
   getClosestVizPanel,
   getDashboardSceneFor,
@@ -274,7 +276,45 @@ export class DashboardScene extends SceneObjectBase<DashboardSceneState> impleme
 
     const destroyMutationClient = createMutationClient(this);
 
+    // Custom kiosk: subscribe to URL changes and toggle panel menus based on hide_panel_menu param
+    const savedMenus = new Map<string, VizPanelMenu | undefined>();
+    const applyPanelMenuVisibility = (hidePanelMenu: boolean) => {
+      let panels: VizPanel[];
+      try {
+        panels = dashboardSceneGraph.getVizPanels(this);
+      } catch (e) {
+        // Scene tree may not be fully constructed yet (e.g. during row repeat)
+        console.warn('CustomKiosk: getVizPanels failed, will retry on next location change', e);
+        return;
+      }
+      if (hidePanelMenu) {
+        panels.forEach((panel) => {
+          const key = panel.state.key ?? '';
+          if (!savedMenus.has(key)) {
+            savedMenus.set(key, panel.state.menu);
+          }
+          panel.setState({ menu: undefined });
+        });
+      } else {
+        panels.forEach((panel) => {
+          const key = panel.state.key ?? '';
+          if (savedMenus.has(key)) {
+            panel.setState({ menu: savedMenus.get(key) });
+          }
+        });
+      }
+    };
+    const initLoc = locationService.getLocation();
+    const { resolved: initResolved } = computeCustomKioskState(initLoc.pathname, initLoc.search);
+    applyPanelMenuVisibility(initResolved.hidePanelMenu);
+
+    const locationSub = locationService.getLocationObservable().subscribe((loc) => {
+      const { resolved } = computeCustomKioskState(loc.pathname, loc.search);
+      applyPanelMenuVisibility(resolved.hidePanelMenu);
+    });
+
     return () => {
+      locationSub.unsubscribe();
       destroyMutationClient();
       window.__grafanaSceneContext = prevSceneContext;
       clearKeyBindings();

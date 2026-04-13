@@ -22,6 +22,7 @@ import { DashboardRoutes } from 'app/types/dashboard';
 import { DashboardConversionWarningBanner } from '../components/DashboardConversionWarningBanner';
 import { DashboardPrompt } from '../saving/DashboardPrompt';
 import { preserveDashboardSceneStateInLocalStorage } from '../utils/dashboardSessionState';
+import { isKioskEnabled, useCustomKiosk } from '../utils/useCustomKiosk';
 
 import { getDashboardScenePageStateManager } from './DashboardScenePageStateManager';
 import { shouldHideDashboardKioskFooter } from './utils';
@@ -41,6 +42,31 @@ export function DashboardScenePage({ route, queryParams, location }: Props) {
   // After scene migration is complete and we get rid of old dashboard we should refactor dashboardWatcher so this route reload is not need
   const routeReloadCounter = (location.state as any)?.routeReloadCounter;
   const prevParams = useRef<Params<string>>(params);
+  const { resolved } = useCustomKiosk();
+
+  // Bridge useCustomKiosk resolved state into DashboardControls scene state (additive: never overrides _dash.* settings)
+  useEffect(() => {
+    const controls = dashboard?.state.controls;
+    if (!controls) {
+      return;
+    }
+    const updates: Record<string, boolean> = {};
+    if (!controls.state.hideTimeControls && resolved.hideTime) {
+      updates.hideTimeControls = true;
+    }
+    if (!controls.state.hideRefreshControls && resolved.hideRefresh) {
+      updates.hideRefreshControls = true;
+    }
+    if (!controls.state.hideVariableControls && resolved.hideVariables) {
+      updates.hideVariableControls = true;
+    }
+    if (!controls.state.hideLinksControls && resolved.hideLinks) {
+      updates.hideLinksControls = true;
+    }
+    if (Object.keys(updates).length > 0) {
+      controls.setState(updates);
+    }
+  }, [dashboard, resolved.hideTime, resolved.hideRefresh, resolved.hideVariables, resolved.hideLinks]);
 
   useEffect(() => {
     if (route.routeName === DashboardRoutes.Normal && type === 'snapshot') {
@@ -116,8 +142,8 @@ export function DashboardScenePage({ route, queryParams, location }: Props) {
   }
 
   // `locationSearchToObject()` parses `?kiosk` as `true` (boolean param). Some clients can emit `?kiosk=`, which parses as ''.
-  const isKioskMode = queryParams.kiosk === '1' || queryParams.kiosk === true || queryParams.kiosk === '';
-  const hideFooter = shouldHideDashboardKioskFooter(queryParams.hideLogo);
+  const isKioskMode = isKioskEnabled(queryParams.kiosk) || resolved.hideChrome;
+  const hideFooter = shouldHideDashboardKioskFooter(queryParams.hideLogo) || resolved.hideKioskFooter;
 
   return (
     <UrlSyncContextProvider scene={dashboard} updateUrlOnInit={true} createBrowserHistorySteps={true}>

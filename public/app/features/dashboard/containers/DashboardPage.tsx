@@ -36,6 +36,7 @@ import { liveTimer } from '../dashgrid/liveTimer';
 import { getTimeSrv } from '../services/TimeSrv';
 import { cleanUpDashboardAndVariables } from '../state/actions';
 import { initDashboard } from '../state/initDashboard';
+import { computeCustomKioskState } from '../../dashboard-scene/utils/useCustomKiosk';
 
 import { DashboardPageError } from './DashboardPageError';
 import { DashboardPageRouteParams, DashboardPageRouteSearchParams } from './types';
@@ -359,6 +360,9 @@ export class UnthemedDashboardPage extends PureComponent<Props, State> {
     const { editPanel, viewPanel, pageNav, sectionNav } = this.state;
     const kioskMode = getKioskMode(this.props.queryParams);
     const styles = getStyles(theme);
+    const loc = locationService.getLocation();
+    const { resolved } = computeCustomKioskState(loc.pathname, loc.search);
+    const hidePanelMenus = resolved.hidePanelMenu;
 
     if (!dashboard || !pageNav || !sectionNav) {
       return <DashboardLoading initPhase={this.props.initPhase} />;
@@ -408,6 +412,7 @@ export class UnthemedDashboardPage extends PureComponent<Props, State> {
               isEditable={!!dashboard.meta.canEdit}
               viewPanel={viewPanel}
               editPanel={editPanel}
+              hidePanelMenus={hidePanelMenus}
             />
           )}
 

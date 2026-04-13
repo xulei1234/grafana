@@ -10,7 +10,9 @@ import { ErrorBoundaryAlert, floatingUtils, getDragStyles, LinkButton, useStyles
 import { useGrafana } from 'app/core/context/GrafanaContext';
 import { useMediaQueryMinWidth } from 'app/core/hooks/useMediaQueryMinWidth';
 import { CommandPalette } from 'app/features/commandPalette/CommandPalette';
+import { computeCustomKioskState } from 'app/features/dashboard-scene/utils/useCustomKiosk';
 import { ScopesDashboards } from 'app/features/scopes/dashboards/ScopesDashboards';
+import { KioskMode } from 'app/types/dashboard';
 
 import { AppChromeMenu } from './AppChromeMenu';
 import { AppChromeService, DOCKED_LOCAL_STORAGE_KEY } from './AppChromeService';
@@ -78,7 +80,15 @@ export function AppChrome({ children }: Props) {
   useEffect(() => {
     const queryParams = locationSearchToObject(search);
     chrome.setKioskModeFromUrl(queryParams.kiosk);
-  }, [chrome, search]);
+
+    // When hide_all=true (without kiosk param), also enter full kiosk mode to hide chrome.
+    // The !queryParams.kiosk guard avoids double-setting — when kiosk IS present,
+    // setKioskModeFromUrl above already handles it.
+    const { resolved } = computeCustomKioskState(pathname, search);
+    if (resolved.hideChrome && !queryParams.kiosk) {
+      chrome.update({ kioskMode: KioskMode.Full });
+    }
+  }, [chrome, pathname, search]);
 
   // Chromeless routes are without topNav, mega menu, search & command palette
   // We check chromeless twice here instead of having a separate path so {children}

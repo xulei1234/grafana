@@ -42,6 +42,7 @@ export interface DashboardControlsState extends SceneObjectState {
   timePicker: SceneTimePicker;
   refreshPicker: SceneRefreshPicker;
   hideTimeControls?: boolean;
+  hideRefreshControls?: boolean;
   hideVariableControls?: boolean;
   hideLinksControls?: boolean;
   // Hides the dashboard-controls dropdown menu
@@ -56,7 +57,13 @@ export class DashboardControls extends SceneObjectBase<DashboardControlsState> {
   });
 
   protected _urlSync = new SceneObjectUrlSyncConfig(this, {
-    keys: ['_dash.hideTimePicker', '_dash.hideVariables', '_dash.hideLinks', '_dash.hideDashboardControls'],
+    keys: [
+      '_dash.hideTimePicker',
+      '_dash.hideRefreshPicker',
+      '_dash.hideVariables',
+      '_dash.hideLinks',
+      '_dash.hideDashboardControls',
+    ],
   });
 
   /**
@@ -68,14 +75,30 @@ export class DashboardControls extends SceneObjectBase<DashboardControlsState> {
   }
 
   updateFromUrl(values: SceneObjectUrlValues) {
-    const { hideTimeControls, hideVariableControls, hideLinksControls, hideDashboardControls } = this.state;
+    const { hideTimeControls, hideRefreshControls, hideVariableControls, hideLinksControls, hideDashboardControls } =
+      this.state;
     const isEnabledViaUrl = (key: string) => values[key] === 'true' || values[key] === '';
 
     // Only allow hiding, never "unhiding" from url
     // Because this should really only change on first init it's fine to do multiple setState here
 
-    if (!hideTimeControls && isEnabledViaUrl('_dash.hideTimePicker')) {
-      this.setState({ hideTimeControls: true });
+    // Backward compat: _dash.hideTimePicker hides both timePicker and refreshPicker
+    if (isEnabledViaUrl('_dash.hideTimePicker')) {
+      const updates: Partial<DashboardControlsState> = {};
+      if (!hideTimeControls) {
+        updates.hideTimeControls = true;
+      }
+      if (!hideRefreshControls) {
+        updates.hideRefreshControls = true;
+      }
+      if (Object.keys(updates).length > 0) {
+        this.setState(updates);
+      }
+    }
+
+    // Independent refreshPicker control
+    if (!hideRefreshControls && isEnabledViaUrl('_dash.hideRefreshPicker')) {
+      this.setState({ hideRefreshControls: true });
     }
 
     if (!hideVariableControls && isEnabledViaUrl('_dash.hideVariables')) {
@@ -101,7 +124,8 @@ export class DashboardControls extends SceneObjectBase<DashboardControlsState> {
     this.addActivationHandler(() => {
       let refreshPickerDeactivation: CancelActivationHandler | undefined;
 
-      if (this.state.hideTimeControls) {
+      // When refresh picker is hidden from rendering, activate it manually so auto-refresh still works
+      if (this.state.hideRefreshControls || this.state.hideTimeControls) {
         refreshPickerDeactivation = this.state.refreshPicker.activate();
       }
 
@@ -141,7 +165,7 @@ export class DashboardControls extends SceneObjectBase<DashboardControlsState> {
     const hasLinks = getDashboardSceneFor(this).state.links?.length > 0;
     const hideLinks = this.state.hideLinksControls || !hasLinks;
     const hideVariables = this.state.hideVariableControls || (!hasAnnotations && !hasVariables);
-    const hideTimePicker = this.state.hideTimeControls;
+    const hideTimePicker = this.state.hideTimeControls && this.state.hideRefreshControls;
     const hideDashboardControls = this.state.hideDashboardControls || !hasDashboardControls(dashboard);
 
     return !(hideVariables && hideLinks && hideTimePicker && hideDashboardControls);
@@ -153,6 +177,7 @@ function DashboardControlsRenderer({ model }: SceneComponentProps<DashboardContr
     refreshPicker,
     timePicker,
     hideTimeControls,
+    hideRefreshControls,
     hideVariableControls,
     hideLinksControls,
     hideDashboardControls,
@@ -211,10 +236,10 @@ function DashboardControlsRenderer({ model }: SceneComponentProps<DashboardContr
             </div>
           )}
           <div className={cx(styles.rightControlsNewLayout, editPanel && styles.rightControlsWrap)}>
-            {!hideTimeControls && (
+            {(!hideTimeControls || !hideRefreshControls) && (
               <div className={styles.fixedControlsNewLayout}>
-                <timePicker.Component model={timePicker} />
-                <refreshPicker.Component model={refreshPicker} />
+                {!hideTimeControls && <timePicker.Component model={timePicker} />}
+                {!hideRefreshControls && <refreshPicker.Component model={refreshPicker} />}
               </div>
             )}
             {config.featureToggles.dashboardNewLayouts && (
@@ -250,10 +275,10 @@ function DashboardControlsRenderer({ model }: SceneComponentProps<DashboardContr
       className={cx(styles.controls, editPanel && styles.controlsPanelEdit)}
     >
       <div className={cx(styles.rightControls, editPanel && styles.rightControlsWrap)}>
-        {!hideTimeControls && (
+        {(!hideTimeControls || !hideRefreshControls) && (
           <div className={styles.fixedControls}>
-            <timePicker.Component model={timePicker} />
-            <refreshPicker.Component model={refreshPicker} />
+            {!hideTimeControls && <timePicker.Component model={timePicker} />}
+            {!hideRefreshControls && <refreshPicker.Component model={refreshPicker} />}
           </div>
         )}
         {config.featureToggles.dashboardNewLayouts && (
