@@ -89,7 +89,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Create status
-        uses: myrotvorets/set-commit-status-action@6d6905c99cd24a4a2cbccc720b62dc6ca5587141
+        uses: myrotvorets/set-commit-status-action@334d6c3a247729e7e777368cd4fbb7f3df49c882
         with:
           token: ${{ github.token }}
           sha: ${{ inputs.pr_commit_sha }}
