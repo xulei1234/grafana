@@ -124,8 +124,10 @@ export class DashboardControls extends SceneObjectBase<DashboardControlsState> {
     this.addActivationHandler(() => {
       let refreshPickerDeactivation: CancelActivationHandler | undefined;
 
-      // When refresh picker is hidden from rendering, activate it manually so auto-refresh still works
-      if (this.state.hideRefreshControls || this.state.hideTimeControls) {
+      // When refresh picker is hidden from rendering, activate it manually so auto-refresh still works.
+      // Only activate when hideRefreshControls is true — if only hideTimeControls is true, the
+      // refresh picker is still rendered and activated automatically by the scene tree.
+      if (this.state.hideRefreshControls) {
         refreshPickerDeactivation = this.state.refreshPicker.activate();
       }
 

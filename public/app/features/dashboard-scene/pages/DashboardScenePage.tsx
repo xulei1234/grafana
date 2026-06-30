@@ -8,6 +8,7 @@ import { UrlSyncContextProvider } from '@grafana/scenes';
 import { Box } from '@grafana/ui';
 import { Page } from 'app/core/components/Page/Page';
 import PageLoader from 'app/core/components/PageLoader/PageLoader';
+import { isKioskEnabled, useCustomKiosk } from 'app/core/navigation/customKiosk';
 import { GrafanaRouteComponentProps } from 'app/core/navigation/types';
 import {
   DashboardBrandingFooter,
@@ -22,7 +23,6 @@ import { DashboardRoutes } from 'app/types/dashboard';
 import { DashboardConversionWarningBanner } from '../components/DashboardConversionWarningBanner';
 import { DashboardPrompt } from '../saving/DashboardPrompt';
 import { preserveDashboardSceneStateInLocalStorage } from '../utils/dashboardSessionState';
-import { isKioskEnabled, useCustomKiosk } from '../utils/useCustomKiosk';
 
 import { getDashboardScenePageStateManager } from './DashboardScenePageStateManager';
 import { shouldHideDashboardKioskFooter } from './utils';
@@ -44,7 +44,23 @@ export function DashboardScenePage({ route, queryParams, location }: Props) {
   const prevParams = useRef<Params<string>>(params);
   const { resolved } = useCustomKiosk();
 
-  // Bridge useCustomKiosk resolved state into DashboardControls scene state (additive: never overrides _dash.* settings)
+  // Bridge useCustomKiosk resolved state into DashboardControls scene state.
+  //
+  // ⚠️ INTENTIONAL DESIGN — additive-only (URL param can hide but not un-hide controls):
+  //
+  // This mirrors the behaviour of the native `_dash.hideTimePicker` / `_dash.hideVariables`
+  // URL params already handled by DashboardControls.updateFromUrl(), which also only ever
+  // sets flags to true and never reverts them.  The rationale is identical:
+  //
+  //   • These params are meant for embedding / kiosk entry-point URLs. The expectation is
+  //     that the user stays in that context for the lifetime of the page.
+  //   • Reverting on URL change would require DashboardControls to track "which flags came
+  //     from URL vs from the dashboard model", adding bidirectional complexity.
+  //   • If the embedding URL changes to remove a param (e.g. back-navigation), the dashboard
+  //     will normally re-mount (routeReloadCounter or uid change) and start fresh.
+  //
+  // Do NOT change this to a two-way sync without also updating DashboardControls.updateFromUrl()
+  // and the native _dash.* handling — both must stay consistent.
   useEffect(() => {
     const controls = dashboard?.state.controls;
     if (!controls) {
@@ -141,7 +157,8 @@ export function DashboardScenePage({ route, queryParams, location }: Props) {
     return null;
   }
 
-  // `locationSearchToObject()` parses `?kiosk` as `true` (boolean param). Some clients can emit `?kiosk=`, which parses as ''.
+  // `locationSearchToObject()` parses `?kiosk` (no-value) as boolean true. `?kiosk=` (empty value)
+  // is intentionally NOT treated as kiosk — only `?kiosk` and `?kiosk=1` activate kiosk mode.
   const isKioskMode = isKioskEnabled(queryParams.kiosk) || resolved.hideChrome;
   const hideFooter = shouldHideDashboardKioskFooter(queryParams.hideLogo) || resolved.hideKioskFooter;
 

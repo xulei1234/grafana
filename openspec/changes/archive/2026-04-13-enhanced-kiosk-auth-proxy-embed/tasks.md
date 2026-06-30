@@ -1,5 +1,7 @@
 ## 文件变更清单（编码前锁定）
 
+> **【2026-06-30 修订说明】** 本任务清单下方多处（1.1、1.1.b、1.2、1.3、2.2.g、4.3 等）原描述将 `?kiosk=`（显式空值，字符串 `''`）视为 kiosk 启用值、并在 `setKioskModeFromUrl` / `getKioskMode` 补充 `case ''`。**该决策已在后续审查中撤销**：`?kiosk=` 显式空值**不**激活 kiosk，仅 `?kiosk`（无值，经 parseKeyValue 解析为 boolean `true`）、`?kiosk=1`、`?kiosk=true` 激活。三处判定（`AppChromeService.setKioskModeFromUrl`、`getKioskMode`、`useCustomKiosk.isKioskEnabled`）一致不认 `''`。下方涉及 `case ''` / `kiosk === ''` 的条目均为历史记录，实际实现以 `design.md` 第 88、164 行为准。另：`kiosk=tv` 为遗留值，当前版本（`KioskMode` 枚举仅含 `Full`）不支持、变更前同样不识别，仅测试用例引用。
+
 | 操作 | 文件路径 | 说明 |
 |------|----------|------|
 | **新建** | `public/app/features/dashboard-scene/utils/customKioskTypes.ts` | 参数名常量 + TS 类型（无业务逻辑） |
@@ -534,20 +536,14 @@
     ```
     注：需在文件顶部从 `customKioskTypes` 导入 `CUSTOM_KIOSK_PARAMS`
   - [x] **2.3.c** 在 `SoloPanelPage.tsx` 中消费 `resolved.hidePanelMenu`：
-    ```typescript
-    // public/app/features/dashboard-scene/solo/SoloPanelPage.tsx
-    // 在 SoloPanelRenderer 组件内：
-    import { useCustomKiosk } from '../utils/useCustomKiosk';
 
-    const { resolved } = useCustomKiosk();
-    // 在渲染 VizPanel 时，若 resolved.hidePanelMenu，则执行 panel.setState({ menu: undefined })
-    // 注意：solo 页面每次只渲染一个 panel，可在 useEffect 中处理：
-    useEffect(() => {
-      if (resolved.hidePanelMenu && panel) {
-        panel.setState({ menu: undefined });
-      }
-    }, [resolved.hidePanelMenu, panel]);
-    ```
+    > **⚠️ 实际实现与此处原始描述不同（实现更优）：**
+    > `hide_panel_menu` 的处理已由 `DashboardScene._activationHandler`（`DashboardScene.tsx`）集中通过订阅 `locationService.getLocationObservable()` 统一处理。
+    > `DashboardScene` 遍历所有 `VizPanel`，保存原始 `menu` 引用到 `savedMenus` Map，并在隐藏/恢复时双向切换。
+    > `SoloPanelPage` 使用相同的 `DashboardScene` 实例，因此 panel menu 隐藏在 `/d-solo` 路由下同样生效，无需在 `SoloPanelPage.tsx` 内单独 `useEffect`。
+    > `SoloPanelPage.tsx` 引入 `useCustomKiosk` 仅用于 `resolved.hideKioskFooter`（控制 logo 显隐）。
+    >
+    > 如需维护此功能，请查看 `DashboardScene.tsx` 中的 `applyPanelMenuVisibility` 函数，而不是 `SoloPanelPage.tsx` 内的任何 `useEffect`。
   - [x] **2.3.d** 运行相关测试：
     ```bash
     yarn jest --no-watch public/app/features/dashboard-scene/scene/DashboardScene.test.ts

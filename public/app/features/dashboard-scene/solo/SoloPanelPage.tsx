@@ -9,6 +9,7 @@ import { UrlSyncContextProvider } from '@grafana/scenes';
 import { Alert, Box, useStyles2 } from '@grafana/ui';
 import PageLoader from 'app/core/components/PageLoader/PageLoader';
 import { EntityNotFound } from 'app/core/components/PageNotFound/EntityNotFound';
+import { useCustomKiosk } from 'app/core/navigation/customKiosk';
 import { GrafanaRouteComponentProps } from 'app/core/navigation/types';
 import { DashboardPageRouteParams } from 'app/features/dashboard/containers/types';
 import { DashboardRoutes } from 'app/types/dashboard';
@@ -16,7 +17,6 @@ import { DashboardRoutes } from 'app/types/dashboard';
 import { getDashboardScenePageStateManager } from '../pages/DashboardScenePageStateManager';
 import { DashboardScene } from '../scene/DashboardScene';
 import { SoloPanelContextProvider, useDefineSoloPanelContext } from '../scene/SoloPanelContext';
-import { useCustomKiosk } from '../utils/useCustomKiosk';
 
 import { SoloPanelPageLogo } from './SoloPanelPageLogo';
 

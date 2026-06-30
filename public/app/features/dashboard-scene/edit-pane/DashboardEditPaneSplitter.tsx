@@ -28,6 +28,8 @@ interface Props {
   isEditing?: boolean;
   body?: React.ReactNode;
   controls?: React.ReactNode;
+  /** When true, removes the outer canvas padding (driven by the no_padding URL param) */
+  noPadding?: boolean;
 }
 
 export function DashboardEditPaneSplitter(props: Props) {
@@ -38,13 +40,13 @@ export function DashboardEditPaneSplitter(props: Props) {
   }
 }
 
-function DashboardEditPaneSplitterLegacy({ dashboard, body, controls }: Props) {
+function DashboardEditPaneSplitterLegacy({ dashboard, body, controls, noPadding }: Props) {
   const headerHeight = useChromeHeaderHeight();
   const styles = useStyles2(getStyles, headerHeight ?? 0);
 
   return (
     <NativeScrollbar onSetScrollRef={dashboard.onSetScrollRef}>
-      <div className={styles.canvasWrappperOld}>
+      <div className={cx(styles.canvasWrappperOld, noPadding && styles.noPadding)}>
         <NavToolbarActions dashboard={dashboard} />
         <div className={styles.controlsWrapperSticky}>{controls}</div>
         <div className={styles.body}>{body}</div>
@@ -53,7 +55,7 @@ function DashboardEditPaneSplitterLegacy({ dashboard, body, controls }: Props) {
   );
 }
 
-function DashboardEditPaneSplitterNewLayouts({ dashboard, isEditing, body, controls }: Props) {
+function DashboardEditPaneSplitterNewLayouts({ dashboard, isEditing, body, controls, noPadding }: Props) {
   const headerHeight = useChromeHeaderHeight();
   const { editPane } = dashboard.state;
   const styles = useStyles2(getStyles, headerHeight ?? 0);
@@ -144,7 +146,7 @@ function DashboardEditPaneSplitterNewLayouts({ dashboard, isEditing, body, contr
     if (renderWithoutSidebar) {
       return (
         <div
-          className={cx(styles.bodyWrapper, styles.bodyWrapperKiosk)}
+          className={cx(styles.bodyWrapper, styles.bodyWrapperKiosk, noPadding && styles.noPadding)}
           data-testid={selectors.components.DashboardEditPaneSplitter.primaryBody}
         >
           <NativeScrollbar onSetScrollRef={dashboard.onSetScrollRef}>{body}</NativeScrollbar>
@@ -154,12 +156,12 @@ function DashboardEditPaneSplitterNewLayouts({ dashboard, isEditing, body, contr
 
     return (
       <div
-        className={styles.bodyWrapper}
+        className={cx(styles.bodyWrapper, noPadding && styles.noPadding)}
         data-testid={selectors.components.DashboardEditPaneSplitter.primaryBody}
         {...sidebarContext.outerWrapperProps}
       >
         <div
-          className={styles.scrollContainer}
+          className={cx(styles.scrollContainer, noPadding && styles.noPadding)}
           ref={onBodyRef}
           onPointerDown={onClearSelection}
           data-testid={selectors.components.DashboardEditPaneSplitter.bodyContainer}
@@ -310,6 +312,9 @@ function getStyles(theme: GrafanaTheme2, headerHeight: number) {
         background: theme.colors.background.canvas,
         top: headerHeight,
       },
+    }),
+    noPadding: css({
+      padding: '0 !important',
     }),
   };
 }

@@ -9,8 +9,8 @@ import { locationSearchToObject, locationService, useScopes } from '@grafana/run
 import { ErrorBoundaryAlert, floatingUtils, getDragStyles, LinkButton, useStyles2 } from '@grafana/ui';
 import { useGrafana } from 'app/core/context/GrafanaContext';
 import { useMediaQueryMinWidth } from 'app/core/hooks/useMediaQueryMinWidth';
+import { computeCustomKioskState } from 'app/core/navigation/customKiosk';
 import { CommandPalette } from 'app/features/commandPalette/CommandPalette';
-import { computeCustomKioskState } from 'app/features/dashboard-scene/utils/useCustomKiosk';
 import { ScopesDashboards } from 'app/features/scopes/dashboards/ScopesDashboards';
 import { KioskMode } from 'app/types/dashboard';
 
@@ -81,11 +81,12 @@ export function AppChrome({ children }: Props) {
     const queryParams = locationSearchToObject(search);
     chrome.setKioskModeFromUrl(queryParams.kiosk);
 
-    // When hide_all=true (without kiosk param), also enter full kiosk mode to hide chrome.
-    // The !queryParams.kiosk guard avoids double-setting — when kiosk IS present,
-    // setKioskModeFromUrl above already handles it.
+    // When hide_all=true (or kiosk is enabled), force full kiosk mode to hide chrome.
+    // hide_all is the strongest display-hide signal and drives KioskMode.Full regardless of
+    // any other kiosk value. (kiosk=tv is a legacy value, not recognized as kiosk-enabled in
+    // this version — see isKioskEnabled / getKioskMode.)
     const { resolved } = computeCustomKioskState(pathname, search);
-    if (resolved.hideChrome && !queryParams.kiosk) {
+    if (resolved.hideChrome) {
       chrome.update({ kioskMode: KioskMode.Full });
     }
   }, [chrome, pathname, search]);

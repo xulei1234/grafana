@@ -360,6 +360,57 @@ describe('DashboardControls', () => {
       expect(await screen.findByTestId(selectors.pages.Dashboard.DashNav.playlistControls.stop)).toBeInTheDocument();
     });
   });
+
+  describe('time/refresh picker DOM rendering', () => {
+    beforeEach(() => {
+      config.featureToggles.dashboardNewLayouts = true;
+      jest.mocked(playlistSrv.useState).mockReturnValue({ isPlaying: false });
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('renders both timePicker and refreshPicker in the DOM by default', async () => {
+      const controls = buildTestScene();
+      const { findByTestId } = render(<controls.Component model={controls} />);
+      expect(await findByTestId(selectors.components.TimePicker.openButton)).toBeInTheDocument();
+      expect(await findByTestId(selectors.components.RefreshPicker.runButtonV2)).toBeInTheDocument();
+    });
+
+    it('hides refreshPicker from DOM but keeps timePicker when only hideRefreshControls=true', async () => {
+      const controls = buildTestScene({ hideRefreshControls: true });
+      const { findByTestId, queryByTestId } = render(<controls.Component model={controls} />);
+      expect(await findByTestId(selectors.components.TimePicker.openButton)).toBeInTheDocument();
+      expect(queryByTestId(selectors.components.RefreshPicker.runButtonV2)).not.toBeInTheDocument();
+    });
+
+    it('hides timePicker from DOM but keeps refreshPicker when only hideTimeControls=true', async () => {
+      const controls = buildTestScene({ hideTimeControls: true });
+      const { findByTestId, queryByTestId } = render(<controls.Component model={controls} />);
+      expect(queryByTestId(selectors.components.TimePicker.openButton)).not.toBeInTheDocument();
+      expect(await findByTestId(selectors.components.RefreshPicker.runButtonV2)).toBeInTheDocument();
+    });
+
+    it('hides both timePicker and refreshPicker from DOM when both hideTimeControls and hideRefreshControls are true', async () => {
+      const controls = buildTestScene({ hideTimeControls: true, hideRefreshControls: true });
+      render(<controls.Component model={controls} />);
+      expect(screen.queryByTestId(selectors.components.TimePicker.openButton)).not.toBeInTheDocument();
+      expect(screen.queryByTestId(selectors.components.RefreshPicker.runButtonV2)).not.toBeInTheDocument();
+    });
+
+    it('hasControls returns false when all controls are hidden', async () => {
+      const controls = buildTestScene({
+        hideTimeControls: true,
+        hideRefreshControls: true,
+        hideVariableControls: true,
+        hideLinksControls: true,
+        hideDashboardControls: true,
+      });
+      render(<controls.Component model={controls} />);
+      expect(controls.hasControls()).toBe(false);
+    });
+  });
 });
 
 function buildTestSceneWithEditable(options: {

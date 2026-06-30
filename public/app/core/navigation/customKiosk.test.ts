@@ -1,4 +1,4 @@
-import { computeCustomKioskState, isKioskEnabled, isParamEnabled } from './useCustomKiosk';
+import { computeCustomKioskState, isKioskEnabled, isParamEnabled } from './customKiosk';
 
 describe('isParamEnabled', () => {
   it('returns false for undefined', () => expect(isParamEnabled(undefined)).toBe(false));
@@ -14,7 +14,7 @@ describe('isParamEnabled', () => {
 describe('isKioskEnabled', () => {
   it('handles "1"', () => expect(isKioskEnabled('1')).toBe(true));
   it('handles boolean true (from ?kiosk no-value)', () => expect(isKioskEnabled(true)).toBe(true));
-  it('handles empty string (from ?kiosk=)', () => expect(isKioskEnabled('')).toBe(true));
+  it('returns false for empty string (from ?kiosk=)', () => expect(isKioskEnabled('')).toBe(false));
   it('returns false for undefined', () => expect(isKioskEnabled(undefined)).toBe(false));
   it('returns false for string "true" (not a kiosk-enable value)', () => expect(isKioskEnabled('true')).toBe(false));
 });
@@ -67,9 +67,9 @@ describe('computeCustomKioskState – kiosk three-state', () => {
     const s = computeCustomKioskState('/d/x', '?kiosk');
     expect(s.resolved.hideChrome).toBe(true);
   });
-  it('kiosk empty string', () => {
+  it('kiosk empty string does NOT trigger kiosk (?kiosk= with explicit empty value)', () => {
     const s = computeCustomKioskState('/d/x', '?kiosk=');
-    expect(s.resolved.hideChrome).toBe(true);
+    expect(s.resolved.hideChrome).toBe(false);
   });
   it('kiosk=true string IS parsed to boolean true by parseKeyValue, so it triggers kiosk', () => {
     // Grafana's parseKeyValue converts string 'true' → boolean true

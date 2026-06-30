@@ -2,10 +2,11 @@
 
 | 项目 | 内容 |
 |------|------|
-| 文档版本 | 1.0.0 |
+| 文档版本 | 1.1.0 |
 | 变更分支 | `feat/frontOps` |
 | 基线版本 | Grafana v13（本地构建 `main` @ `f0a0379`) |
 | 落地日期 | 2026-04-10 |
+| 最近修订 | 2026-06-30（明确 `?kiosk=` 显式空值不激活 kiosk 的语义，三处判定一致） |
 | 状态 | ✅ 已完成，待合并 |
 | 关联 OpenSpec | `openspec/changes/enhanced-kiosk-auth-proxy-embed/` |
 
@@ -46,7 +47,7 @@ Grafana 原生 Kiosk 模式（`?kiosk=1`）只提供粗粒度的全局界面隐�
 | `hide_panel_menu=true` | 隐藏所有 panel 右上角操作菜单，URL 移除后自动恢复 |
 | `no_padding=true` | 计算并输出 `removeOuterPadding` 状态；`hide_all` 路径已由 AppChrome chromeless 处理 |
 | ESC 键联动 | 退出 kiosk 时同步清除所有自定义参数，避免 chrome 隐藏残留 |
-| `kiosk=''` 修复 | 修复 `AppChromeService.setKioskModeFromUrl` 漏处理空串分支的历史 bug |
+| `kiosk` 取值语义明确 | `?kiosk`（无值）/`?kiosk=1`/`?kiosk=true` 激活 kiosk；`?kiosk=`（显式空值）**不**激活，三处判定（`setKioskModeFromUrl`/`getKioskMode`/`isKioskEnabled`）一致 |
 | Auth Proxy 接入文档 | `embed-guide.md`：配置清单、失败路径验证、iframe 联调步骤 |
 | Dashboard scene 路径 | `DashboardScenePage`、`DashboardControls`、`DashboardScene` |
 | 旧版 dashboard 路径 | `DashboardPage` + `DashboardGrid.hidePanelMenus` |
@@ -151,7 +152,7 @@ export function useCustomKiosk(): CustomKioskState
 
 #### `AppChromeService.tsx`
 
-- **修复**：`setKioskModeFromUrl` 补充 `case '':` 分支（历史 bug：`?kiosk=` 空串未触发 kiosk）
+- **`setKioskModeFromUrl` 仅处理 `kiosk === '1'` 与 `kiosk === true` 两个启用值**：`?kiosk=`（显式空值，字符串 `''`）**不**激活 kiosk，与 `?kiosk`（无值，经 parseKeyValue 解析为 boolean `true`）明确区分。该行为与 `getKioskMode`、`useCustomKiosk.isKioskEnabled` 三处判定一致
 - **新增**：`exitKioskMode` 退出时同步清除 `CUSTOM_KIOSK_PARAM_LIST` 全部参数
 
 #### `AppChrome.tsx`
@@ -287,7 +288,7 @@ sequenceDiagram
 | `dashboard-scene/utils/customKioskTypes.ts` | 新增 | 5 个常量 + 4 个 TypeScript 接口 |
 | `dashboard-scene/utils/useCustomKiosk.ts` | 新增 | 核心 Hook + 纯函数，无副作用 |
 | `dashboard-scene/utils/useCustomKiosk.test.ts` | 新增 | 34 个单元测试 |
-| `AppChrome/AppChromeService.tsx` | 修改 | 修复空串 bug + 清除自定义参数 |
+| `AppChrome/AppChromeService.tsx` | 修改 | `setKioskModeFromUrl` 仅认 `'1'`/`true`（`?kiosk=` 不激活）+ `exitKioskMode` 清除自定义参数 |
 | `AppChrome/AppChromeService.test.tsx` | 修改 | 新增 6 个测试 |
 | `AppChrome/AppChrome.tsx` | 修改 | hide_all → KioskMode.Full |
 | `dashboard-scene/scene/DashboardControls.tsx` | 修改 | 拆分 hideRefreshControls + 渲染独立化 |
@@ -312,7 +313,7 @@ sequenceDiagram
 
 - Grafana 后端 API、数据查询、权限模型
 - `from`/`to`/`refresh`/`var-*` 等数据参数语义
-- `kiosk=tv`（原生 TV 模式）行为
+- `kiosk=tv`：遗留值，当前版本（`KioskMode` 枚举仅含 `Full`）不支持、变更前同样不识别，不在本次兼容范围内（仅测试用例引用）
 - `_dash.hideVariables`、`_dash.hideLinks` 原有 URL 参数行为
 - `_dash.hideTimePicker` 向后兼容（继续同时隐藏 time + refresh）
 
@@ -330,7 +331,7 @@ sequenceDiagram
 | panel 菜单 `setState({menu:undefined})` 不可逆 | 🟢 低 | `Map<panelId, menu>` 保存原始引用；URL 移除时恢复 |
 | `hide_all` 触发 kiosk 后 footer 显示（盲区六） | ✅ 已修复 | `hideFooter \|\| resolved.hideKioskFooter` |
 | `useObservable` 首帧返回 undefined | ✅ 已修复 | 提供初始值 `locationService.getLocation()` |
-| `kiosk=''` 空串未触发 kiosk 模式 | ✅ 已修复 | `AppChromeService.setKioskModeFromUrl` 补充 `case ''` |
+| `?kiosk=` 显式空值被误激活为 kiosk | ✅ 已明确 | 三处判定（`setKioskModeFromUrl`/`getKioskMode`/`isKioskEnabled`）一致不认 `''`，仅 `?kiosk`/`?kiosk=1`/`?kiosk=true` 激活 |
 | `_dash.hideTimePicker` 向后兼容破坏 | ✅ 已验证 | `updateFromUrl` 保持双字段同时设置逻辑 |
 
 ---
@@ -364,7 +365,7 @@ ESLint 检查：**0 error / 0 warning** ✅
 | `hide_all` 隐藏变量区和 Links 区 | ✅ |
 | `hide_time` / `hide_refresh` 各自独立 | ✅ |
 | `hide_panel_menu` 可逆（URL 移除后恢复） | ✅ |
-| `kiosk=''` 空串视为启用 | ✅ |
+| `?kiosk=` 显式空值不激活 kiosk（区别于 `?kiosk` 无值） | ✅ |
 | ESC 退出 kiosk 清除所有自定义参数 | ✅ |
 | `_dash.hideTimePicker` 向后兼容 | ✅ |
 | footer 在 `hide_all` 时正确隐藏 | ✅ |
@@ -495,7 +496,7 @@ cookie_samesite = lax
 | `hide_refresh=true` | boolean | 仅隐藏刷新控件 | ✅ |
 | `hide_panel_menu=true` | boolean | 隐藏所有 panel 菜单（可逆）| ✅ |
 | `no_padding=true` | boolean | 输出 `removeOuterPadding=true`（`hide_all` 路径已覆盖）| ✅ |
-| `kiosk=1` / `kiosk` / `kiosk=` | - | 原生 kiosk（全局 chrome 隐藏，不含 panel 菜单）| — |
+| `kiosk` / `kiosk=1` / `kiosk=true` | - | 原生 kiosk（全局 chrome 隐藏，不含 panel 菜单）；`kiosk=` 显式空值**不**激活 | — |
 
 ### B. 相关文档
 

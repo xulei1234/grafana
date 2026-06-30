@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7-labs
+# # syntax=docker/dockerfile:1.7-labs
 
 # to maintain formatting of multiline commands in vscode, add the following to settings.json:
 # "docker.languageserver.formatter.ignoreMultilineInstructions": true

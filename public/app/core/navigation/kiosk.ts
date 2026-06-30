@@ -7,7 +7,6 @@ export function getKioskMode(queryParams: UrlQueryMap): KioskMode | null {
     //  legacy support
     case '1':
     case true:
-    case '': // align with AppChromeService.setKioskModeFromUrl and DashboardScenePage
       return KioskMode.Full;
     default:
       return null;

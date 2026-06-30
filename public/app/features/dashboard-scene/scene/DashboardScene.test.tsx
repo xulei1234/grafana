@@ -16,6 +16,7 @@ import {
   SceneVariableSet,
   TestVariable,
   VizPanel,
+  VizPanelMenu,
   SceneGridRow,
   behaviors,
   SceneDataTransformer,
@@ -1718,6 +1719,72 @@ describe('DashboardScene', () => {
       const result = scene.getExpressionCounts(saveModel);
 
       expect(result).toEqual({ sql: 1 });
+    });
+  });
+
+  describe('panel menu visibility (hide_panel_menu URL param)', () => {
+    let scene: DashboardScene;
+    let deactivateScene: () => void;
+
+    beforeEach(() => {
+      locationService.push('/d/dash-1');
+      // Ensure getDashboardSrv mock has setCurrent (another test's spy removes it)
+      jest.spyOn(require('app/features/dashboard/services/DashboardSrv'), 'getDashboardSrv').mockRestore();
+      // Build scene with panels that have menus
+      const menu = new VizPanelMenu({ items: [] });
+      scene = buildTestScene({
+        body: new DefaultGridLayoutManager({
+          grid: new SceneGridLayout({
+            children: [
+              new DashboardGridItem({
+                key: 'griditem-1',
+                body: new VizPanel({ title: 'Panel A', key: 'panel-1', pluginId: 'table', menu }),
+              }),
+              new DashboardGridItem({
+                key: 'griditem-2',
+                body: new VizPanel({ title: 'Panel B', key: 'panel-2', pluginId: 'table' }),
+              }),
+            ],
+          }),
+        }),
+      });
+      deactivateScene = scene.activate();
+    });
+
+    afterEach(() => {
+      deactivateScene?.();
+    });
+
+    it('hides panel menus when ?hide_panel_menu=true is in the URL', () => {
+      locationService.push('/d/dash-1?hide_panel_menu=true');
+
+      const panels = dashboardSceneGraph.getVizPanels(scene);
+      panels.forEach((panel) => {
+        expect(panel.state.menu).toBeUndefined();
+      });
+    });
+
+    it('restores panel menus when ?hide_panel_menu is removed', () => {
+      // First hide
+      locationService.push('/d/dash-1?hide_panel_menu=true');
+      // Then restore
+      locationService.push('/d/dash-1');
+
+      const panel1 = dashboardSceneGraph.getVizPanels(scene).find((p) => p.state.key === 'panel-1');
+      expect(panel1?.state.menu).toBeDefined();
+    });
+
+    it('does not re-apply when unrelated URL params change (short-circuit)', () => {
+      locationService.push('/d/dash-1?hide_panel_menu=true');
+      // Clear saved state so we can detect if setState was called again
+      const panels = dashboardSceneGraph.getVizPanels(scene);
+      const setStateSpy = jest.spyOn(panels[0], 'setState');
+
+      // Trigger an unrelated URL change (time range update)
+      locationService.push('/d/dash-1?hide_panel_menu=true&from=now-1h&to=now');
+
+      // setState should NOT have been called again for the same hide_panel_menu value
+      expect(setStateSpy).not.toHaveBeenCalled();
     });
   });
 });

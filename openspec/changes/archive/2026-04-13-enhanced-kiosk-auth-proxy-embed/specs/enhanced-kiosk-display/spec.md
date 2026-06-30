@@ -7,9 +7,9 @@
 - **WHEN** 用户访问 dashboard 页面并携带上述任意自定义参数
 - **THEN** 系统 MUST 统一解析这些参数并将其转换为可复用的展示状态输出
 
-#### Scenario: Invalid custom parameter values fall back to default behavior
-- **WHEN** 用户传入无法识别的增强型 kiosk 参数值
-- **THEN** 系统 MUST 忽略非法值并保持对应区域的默认展示行为
+#### Scenario: Non-explicit-disable values are treated as enabled
+- **WHEN** 用户传入增强型 kiosk 参数的值不是显式禁用值（即非 `false` 或 `0`）
+- **THEN** 系统 MUST 将其视为"启用"，包括空值（`?hide_time`）、`true`、`1` 及任意其他字符串值
 
 ### Requirement: hide_all SHALL override other custom display controls
 当 `hide_all=true` 时，系统 MUST 将其视为最高优先级的增强型隐藏模式，并覆盖原生 kiosk 与其他单项隐藏参数的最终显示效果。
@@ -41,9 +41,9 @@
 - **WHEN** 页面仅携带 `kiosk=true` 且未携带 `hide_all` 或 `hide_panel_menu`
 - **THEN** 系统 MUST 保持 panel 右上角操作菜单可见
 
-#### Scenario: kiosk empty string value is treated as enabled
-- **WHEN** 页面携带 `?kiosk=`（即 kiosk 参数值为空字符串）
-- **THEN** 系统 MUST 视为 kiosk 启用（等效于 `kiosk=true`），对齐现有 `DashboardScenePage` 中的处理逻辑
+#### Scenario: kiosk explicit empty string value is NOT treated as enabled
+- **WHEN** 页面携带 `?kiosk=`（即 kiosk 参数带等号但值为空字符串，区别于不带等号的 `?kiosk`）
+- **THEN** 系统 MUST NOT 视为 kiosk 启用，保持 chrome 可见；仅 `?kiosk`（无值，经 parseKeyValue 解析为 boolean `true`）与 `?kiosk=1` 激活 kiosk。该规则在 `AppChromeService.setKioskModeFromUrl`、`getKioskMode` 与 `useCustomKiosk.isKioskEnabled` 三处一致生效
 
 #### Scenario: ESC key clears all custom kiosk parameters
 - **WHEN** 用户在携带 `kiosk=true&hide_all=true` 的页面按下 ESC 键退出 kiosk 模式

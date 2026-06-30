@@ -18,6 +18,7 @@ import {
 import { setGetObservablePluginLinks, setPanelPluginMetas } from '@grafana/runtime/internal';
 import { VizPanel } from '@grafana/scenes';
 import { Dashboard } from '@grafana/schema';
+import * as customKioskUtils from 'app/core/navigation/customKiosk';
 import { getRouteComponentProps } from 'app/core/navigation/mocks/routeProps';
 import { GrafanaRouteComponentProps } from 'app/core/navigation/types';
 import { DashboardLoaderSrv, setDashboardLoaderSrv } from 'app/features/dashboard/services/DashboardLoaderSrv';
@@ -247,6 +248,52 @@ describe('DashboardScenePage', () => {
     await waitForDashboardToRender();
 
     expect(screen.queryByTestId(selectors.pages.PublicDashboard.footer)).not.toBeInTheDocument();
+  });
+
+  it('hides Powered by footer when ?hide_all=true via hideKioskFooter', async () => {
+    // Why we mock useCustomKiosk instead of pushing '?hide_all=true' to locationService:
+    //
+    // The bridge useEffect in DashboardScenePage is intentionally additive-only (see comment
+    // there). Using locationService.push('?hide_all=true') would set hideTimeControls=true on
+    // the DashboardControls scene object, which then persists in the stateManager's dashboard
+    // cache and leaks into subsequent tests in this suite.  This is a test-isolation consequence
+    // of the singleton stateManager, NOT a sign that the production behaviour is wrong —
+    // in production a full URL change to a different embed URL always triggers a dashboard
+    // reload (routeReloadCounter or uid change) which re-mounts DashboardControls fresh.
+    //
+    // The mock isolates the hideKioskFooter signal without touching DashboardControls state.
+    const spy = jest.spyOn(customKioskUtils, 'useCustomKiosk').mockReturnValue({
+      resolved: {
+        hideChrome: false,
+        hideKioskFooter: true,
+        hideTime: false,
+        hideRefresh: false,
+        hidePanelMenu: false,
+        hideVariables: false,
+        hideLinks: false,
+        removeOuterPadding: false,
+        maximizePanelArea: false,
+      },
+      raw: {
+        kiosk: undefined,
+        hideAll: undefined,
+        hideTime: undefined,
+        hideRefresh: undefined,
+        hidePanelMenu: undefined,
+        noPadding: undefined,
+      },
+      context: { isDashboardPage: true, isSoloPanelPage: false, isViewPanelFullscreen: false },
+    });
+    try {
+      // kiosk=true makes isKioskMode=true → footer would normally show (proven by existing test)
+      // hideKioskFooter=true → hideFooter=true → footer hidden
+      setup({ routeProps: { queryParams: { kiosk: true } } });
+      await waitForDashboardToRender();
+
+      expect(screen.queryByTestId(selectors.pages.PublicDashboard.footer)).not.toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('routeReloadCounter should trigger reload', async () => {

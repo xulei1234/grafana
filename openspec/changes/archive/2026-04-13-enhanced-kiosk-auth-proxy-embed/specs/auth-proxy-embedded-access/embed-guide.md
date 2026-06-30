@@ -56,7 +56,7 @@ disable_signout_menu = true
 
 - `DashboardScenePage.tsx` 中 `loadError` 由 `stateManager.useState()` 提供，若后端返回 401/403，会命中 `DashboardPageError` 组件，展示现有权限错误页——本次未修改此路径（见 `DashboardScenePage.tsx:111-112`）。
 - `useCustomKiosk` hook 仅解析 URL 参数并推导 UI 可见性，不包含任何 token 注入、Session 续期或 Header 伪造逻辑。
-- `AppChromeService.setKioskModeFromUrl` 的修改仅补全了 `kiosk=''` 的分支缺失，不涉及认证逻辑。
+- `AppChromeService.setKioskModeFromUrl` 仅处理 `kiosk === '1'` 与 `kiosk === true` 两种启用值；`?kiosk=`（显式空值）不激活 kiosk，与 `?kiosk`（无值）区分。该修改不涉及认证逻辑。
 
 **当 Auth Proxy 失败时：**
 
@@ -92,6 +92,11 @@ disable_signout_menu = true
 - [ ] `hide_refresh=true` 时刷新选择器不可见
 - [ ] `hide_panel_menu=true` 时所有 panel 的菜单（⋮）不可见
 - [ ] 按 ESC 键后自定义参数被清除，UI 恢复正常
+
+> **⚠️ ESC 清理边界说明：**
+> - 仅当页面处于 kiosk 模式（包括 `hide_all=true` 或原生 `kiosk=1`）时，ESC 键才会触发 `exitKioskMode()` 并清除**所有**自定义参数（`hide_all`、`hide_time`、`hide_refresh`、`hide_panel_menu`、`no_padding`）。
+> - 若嵌入链接**仅**使用单项参数（如 `?hide_time=true`）而**未**携带 `hide_all` 或 `kiosk`，则 ESC 键**不触发** kiosk 退出，自定义参数**不会**被清除、会在页面中持续生效。
+> - 建议：若接入方希望通过 ESC 重置所有参数，应改用 `?hide_all=true` 代替单项参数组合。
 
 ### 3.2 Solo Panel 嵌入
 
@@ -134,7 +139,7 @@ disable_signout_menu = true
 
 **与原生参数的优先级规则：**
 
-- `kiosk=1` 或 `kiosk=` 触发原生 KioskMode.Full（隐藏整个顶栏/侧栏），优先级与 `hide_all` 相同
+- `kiosk=1` 或不带等号的 `kiosk`（解析为 boolean `true`）触发原生 KioskMode.Full（隐藏整个顶栏/侧栏），优先级与 `hide_all` 相同；`kiosk=`（带等号但空值）不激活 kiosk
 - 自定义参数只控制 UI 可见性，不影响 `from`/`to`/`refresh`/`var-*` 等数据参数
 - `_dash.hideTimePicker=true`（dashboard 内部 URL 参数）仍同时设置时间+刷新隐藏（保持向后兼容）
 

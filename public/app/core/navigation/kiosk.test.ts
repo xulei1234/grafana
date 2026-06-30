@@ -11,8 +11,8 @@ describe('getKioskMode', () => {
     expect(getKioskMode({ kiosk: true })).toBe(KioskMode.Full);
   });
 
-  it('returns KioskMode.Full for kiosk="" (empty string, i.e. ?kiosk=)', () => {
-    expect(getKioskMode({ kiosk: '' })).toBe(KioskMode.Full);
+  it('returns null for kiosk="" (explicit empty value, i.e. ?kiosk=, distinct from ?kiosk)', () => {
+    expect(getKioskMode({ kiosk: '' })).toBeNull();
   });
 
   it('returns null when kiosk is undefined', () => {

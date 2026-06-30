@@ -5,8 +5,8 @@ import { AppEvents, NavModel, NavModelItem, PageLayoutType, store, UrlQueryValue
 import { t } from '@grafana/i18n';
 import { config, locationService, reportInteraction } from '@grafana/runtime';
 import { appEvents } from 'app/core/app_events';
+import { CUSTOM_KIOSK_PARAM_LIST } from 'app/core/navigation/customKiosk';
 import { isShallowEqual } from 'app/core/utils/isShallowEqual';
-import { CUSTOM_KIOSK_PARAM_LIST } from 'app/features/dashboard-scene/utils/customKioskTypes';
 import { KioskMode } from 'app/types/dashboard';
 
 import { RouteDescriptor } from '../../navigation/types';
@@ -185,7 +185,6 @@ export class AppChromeService {
     switch (kiosk) {
       case '1':
       case true:
-      case '': // align with DashboardScenePage.tsx:119 three-state kiosk detection
         newKioskMode = KioskMode.Full;
     }
 

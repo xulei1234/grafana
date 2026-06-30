@@ -32,6 +32,39 @@ describe('DashboardEditPaneSplitter', () => {
     config.featureToggles.dashboardNewLayouts = true;
   });
 
+  describe('noPadding prop', () => {
+    it('applies an extra CSS class to bodyWrapper and scrollContainer when noPadding=true (NewLayouts normal path)', () => {
+      const scene = buildTestScene();
+      const { rerender } = render(<DashboardEditPaneSplitter dashboard={scene} noPadding={false} />);
+
+      const primaryBody = screen.getByTestId(selectors.components.DashboardEditPaneSplitter.primaryBody);
+      const bodyContainer = screen.getByTestId(selectors.components.DashboardEditPaneSplitter.bodyContainer);
+
+      const primaryBodyClassWithout = primaryBody.className;
+      const bodyContainerClassWithout = bodyContainer.className;
+
+      rerender(<DashboardEditPaneSplitter dashboard={scene} noPadding={true} />);
+
+      // noPadding=true must add an extra Emotion class; className must differ
+      expect(primaryBody.className).not.toBe(primaryBodyClassWithout);
+      expect(bodyContainer.className).not.toBe(bodyContainerClassWithout);
+    });
+
+    it('applies an extra CSS class to canvas wrapper when noPadding=true (Legacy path)', () => {
+      config.featureToggles.dashboardNewLayouts = false;
+      const scene = buildTestScene();
+      const { rerender, container } = render(<DashboardEditPaneSplitter dashboard={scene} noPadding={false} />);
+
+      // In legacy mode the outermost scrollable div is the first child of NativeScrollbar
+      const canvasWrapper = container.querySelector('[data-scrollbar-content="true"] > div') as HTMLElement | null;
+      const classWithout = canvasWrapper?.className ?? '';
+
+      rerender(<DashboardEditPaneSplitter dashboard={scene} noPadding={true} />);
+
+      expect(canvasWrapper?.className).not.toBe(classWithout);
+    });
+  });
+
   it('should switch between custom and auto layout', async () => {
     const user = userEvent.setup();
     const scene = buildTestScene();

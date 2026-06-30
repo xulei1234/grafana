@@ -191,7 +191,8 @@ Panel 页面应支持：
 ### 9.2 兼容规则
 
 - 未传入任何自定义参数时，Grafana 行为应与原生保持一致。
-- 已有原生 `kiosk`、`kiosk=tv` 逻辑需兼容。
+- 已有原生 `kiosk` 逻辑需兼容：`?kiosk`（无值）、`?kiosk=1`、`?kiosk=true`（后两者经 parseKeyValue 解析为 boolean `true` 或字符串 `'1'`）激活 kiosk；`?kiosk=`（显式空值，字符串 `''`）**不**激活，与 `?kiosk` 无值场景明确区分。该规则在 `AppChromeService.setKioskModeFromUrl`、`getKioskMode`、`useCustomKiosk.isKioskEnabled` 三处一致生效。
+- `kiosk=tv` 为遗留值，当前版本（Grafana v13，`KioskMode` 枚举仅含 `Full`）不支持，变更前同样不被识别为 kiosk 启用值，仅测试用例中有引用，不在本次兼容范围内。
 - 新增参数不应影响普通 Grafana 控制台使用。
 
 ### 9.3 安全规则

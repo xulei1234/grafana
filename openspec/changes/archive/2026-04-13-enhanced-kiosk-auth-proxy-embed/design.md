@@ -85,7 +85,7 @@
 - `no_padding=true` 只影响 `removeOuterPadding`。
 - `isSoloPanelPage=true`（pathname 含 `/d-solo/`）时，`maximizePanelArea=true`。
 
-**kiosk 参数边缘值**：`kiosk === '1'`、`kiosk === true`、`kiosk === ''` 均视为 kiosk 启用，对齐 `DashboardScenePage.tsx` 中的现有处理逻辑，防止不一致。
+**kiosk 参数边缘值**：`kiosk === '1'`、`kiosk === true`（即 `?kiosk` 无值，经 parseKeyValue 解析为 boolean）均视为 kiosk 启用。`kiosk === ''`（`?kiosk=` 显式空值）不触发 kiosk，与 `?kiosk` 无值场景区分。`?kiosk=true` URL 字符串经 parseKeyValue 解析为 boolean `true`，因此也会触发 kiosk。对齐 `DashboardScenePage.tsx`、`AppChromeService.setKioskModeFromUrl`。
 
 ### 3. 按展示层拆分消费职责
 
@@ -115,6 +115,15 @@
 
 - scene 路径已存在控件隐藏逻辑和 URL 初始化机制，重复造轮子会增加维护成本。
 - 旧版路径仍在路由中保留，需要保证行为一致。
+
+**Bridge useEffect 为有意的单向（additive-only）设计**：
+
+`DashboardScenePage` 中的 bridge `useEffect` 将 `resolved.hideTime` / `resolved.hideRefresh` 等值写入 `DashboardControls` scene state 时，遵循**只增不减**原则——参数从 URL 中移除后，控件不会自动恢复显示。这是**有意设计**，与原生 `_dash.hideTimePicker` / `_dash.hideVariables` 在 `DashboardControls.updateFromUrl()` 中的处理方式完全一致：
+
+- 嵌入场景的入口 URL 在用户会话内保持不变；如需切换展示模式，应导航到新 URL，届时 `routeReloadCounter` 或 `uid` 变化会触发 dashboard 重新加载，`DashboardControls` 从初始 state 重建。
+- 实现双向同步需要在 `DashboardControls` 内区分"来自 URL"和"来自 dashboard model"的 flag 来源，引入显著复杂度，与现有模式不符。
+
+**不要**将此 `useEffect` 改为双向同步，除非同时修改 `DashboardControls.updateFromUrl()` 和原生 `_dash.*` 参数的处理方式，保持三者行为一致。
 
 ### 5. Auth Proxy 只定义访问约束，不在前端伪造认证
 
@@ -154,14 +163,14 @@
 
 - [Dashboard scene 与旧版 dashboard 路径行为不一致] → 通过同一个 `useCustomKiosk` 输出和共享测试矩阵约束两条路径。
 - [部分隐藏逻辑依赖具体 DOM 结构，升级 Grafana 后失效] → 优先使用条件渲染和现有 state 控制，减少样式 hack。
-- [把 `hide_all` 绑定成原生 `kiosk` 的别名，导致消费层职责混乱] → `hide_all` 在 Hook 内推导 `resolved`，并在 AppChrome 层以 `kioskMode.Full` 驱动 chrome 隐藏；`DashboardBrandingFooter` 等依赖 `kioskMode` 的组件将同步受影响，此为预期行为。
+- [把 `hide_all` 绑定成原生 `kiosk` 的别名，导致消费层职责混乱] → `hide_all` 在 Hook 内推导 `resolved`，并在 AppChrome 层以 `kioskMode.Full` 驱动 chrome 隐藏；`DashboardBrandingFooter` 等依赖 `kioskMode` 的组件将同步受影响，此为预期行为。**`hide_all=true` 会覆盖 `kiosk=tv`，强制进入 `KioskMode.Full`**——这是有意决策，`hide_all` 优先级高于 `kiosk=tv`。
 - [Auth Proxy 环境配置不完整导致 iframe 仍跳登录页] → 将可信代理、Cookie / SameSite / Embedding 配置列入联调前置条件与验收项。
 - [非法 URL 参数导致异常展示] → 非法值一律按未启用处理，保证默认行为可回退。
 - [新增判断导致渲染分支变多] → 保持 Hook 输出扁平、消费边界清晰，并为关键路径补充单测和组件测。
 - [ESC 键退出 kiosk 后 `hide_all` 残留] → `AppChromeService.exitKioskMode()` 在清除 `kiosk` 参数时，需同步清除 `hide_all`、`hide_time`、`hide_refresh`、`hide_panel_menu`、`no_padding` 等自定义参数，避免用户按 ESC 后 chrome 仍被隐藏。ESC 不清除不含 `kiosk` 的自定义参数（如仅 `?hide_time=true`），此为有意设计。
 - [scene 路径 panel menu 批量置 undefined 的时机] → 在 `DashboardScene` 的激活处理器（`onActivate`）中读取 `resolved.hidePanelMenu` 并设置，URL 变化时通过 `locationService.getLocationObservable()` 触发重新设置。**必须在闭包内保存原始 `VizPanelMenu` 引用以支持双向恢复**，否则参数移除后菜单无法恢复。
 - [`DashboardControls` 新增 `hideRefreshControls` 字段] → 向后兼容策略：`_dash.hideTimePicker=true` 继续同时设置 `hideTimeControls=true` 和 `hideRefreshControls=true`；新增 `_dash.hideRefreshPicker=true` 只设置 `hideRefreshControls=true`；自定义参数 `hide_time` 只设置 `hideTimeControls`，`hide_refresh` 只设置 `hideRefreshControls`。
-- [**已修正**：`AppChromeService.setKioskModeFromUrl` 漏处理 `kiosk === ''`] → 补充 `case ''` 分支与 `DashboardScenePage.tsx:119` 对齐，实现任务 1.1 中同步修复。
+- [**已修正**：`AppChromeService.setKioskModeFromUrl` 漏处理 `kiosk === ''`] → 已撤销该修正：`?kiosk=`（显式空值）不激活 kiosk，只有 `?kiosk`（无值，解析为 boolean true）和 `?kiosk=1` 激活。`setKioskModeFromUrl` 仅处理 `'1'` 和 `true` 两个 case。
 - [**已修正**：`useObservable` 首次渲染返回 `undefined`] → 使用 `useObservable(locationService.getLocationObservable(), locationService.getLocation())` 提供初始值，避免首帧渲染空窗。
 - [`viewPanel=X` 全屏模式下 `hide_panel_menu` 需独立处理] → `DashboardSceneRenderer` 中的全屏 panel 激活时机可能晚于 `DashboardScene.onActivate` 中的批量隐藏，需在全屏 panel 激活路径上额外消费 `hidePanelMenu` 状态。
 - [`DashboardScenePage` footer 逻辑需注入 `resolved.hideKioskFooter`] → 当前 `DashboardScenePage:132` 的 `hideFooter` 只读取 `queryParams.hideLogo`；`hide_all=true` 触发 kiosk 后 footer 因 `!isKioskMode=false` 而出现，需将 `resolved.hideKioskFooter` 也纳入 `hideFooter` 判断。

@@ -64,10 +64,10 @@ describe('AppChromeService', () => {
       expect(svc.state.getValue().kioskMode).toBe(KioskMode.Full);
     });
 
-    it('sets KioskMode.Full when kiosk="" (empty string, i.e. ?kiosk=)', () => {
+    it('does NOT set kioskMode when kiosk="" (explicit empty value, i.e. ?kiosk=, distinct from ?kiosk)', () => {
       const svc = new AppChromeService();
       svc.setKioskModeFromUrl('');
-      expect(svc.state.getValue().kioskMode).toBe(KioskMode.Full);
+      expect(svc.state.getValue().kioskMode).toBeNull();
     });
 
     it('does NOT set kioskMode for unrecognised values', () => {

@@ -4,6 +4,7 @@ import { useLocation, useParams } from 'react-router-dom-v5-compat';
 import { PageLayoutType } from '@grafana/data';
 import { SceneComponentProps } from '@grafana/scenes';
 import { Page } from 'app/core/components/Page/Page';
+import { useCustomKiosk } from 'app/core/navigation/customKiosk';
 import { getNavModel } from 'app/core/selectors/navModel';
 import { useScopesServices } from 'app/features/scopes/ScopesContextProvider';
 import { useSelector } from 'app/types/store';
@@ -29,6 +30,7 @@ export function DashboardSceneRenderer({ model }: SceneComponentProps<DashboardS
   } = model.useState();
 
   const scopesServices = useScopesServices();
+  const { resolved } = useCustomKiosk();
 
   // Disable scope redirects while in edit mode so users aren't navigated away mid-edit.
   useEffect(() => {
@@ -104,6 +106,7 @@ export function DashboardSceneRenderer({ model }: SceneComponentProps<DashboardS
             isEditing={isEditing}
             controls={controls && <controls.Component model={controls} />}
             body={renderBody()}
+            noPadding={resolved.removeOuterPadding}
           />
         )}
         {overlay && <overlay.Component model={overlay} />}

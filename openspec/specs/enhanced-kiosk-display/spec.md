@@ -44,9 +44,9 @@ TBD - created by archiving change enhanced-kiosk-auth-proxy-embed. Update Purpos
 - **WHEN** 页面仅携带 `kiosk=true` 且未携带 `hide_all` 或 `hide_panel_menu`
 - **THEN** 系统 MUST 保持 panel 右上角操作菜单可见
 
-#### Scenario: kiosk empty string value is treated as enabled
-- **WHEN** 页面携带 `?kiosk=`（即 kiosk 参数值为空字符串）
-- **THEN** 系统 MUST 视为 kiosk 启用（等效于 `kiosk=true`），对齐现有 `DashboardScenePage` 中的处理逻辑
+#### Scenario: kiosk explicit empty string value is NOT treated as enabled
+- **WHEN** 页面携带 `?kiosk=`（即 kiosk 参数带等号但值为空字符串，区别于不带等号的 `?kiosk`）
+- **THEN** 系统 MUST NOT 视为 kiosk 启用，保持 chrome 可见；仅 `?kiosk`（无值，经 parseKeyValue 解析为 boolean `true`）与 `?kiosk=1` 激活 kiosk。该规则在 `AppChromeService.setKioskModeFromUrl`、`getKioskMode` 与 `useCustomKiosk.isKioskEnabled` 三处一致生效
 
 #### Scenario: ESC key clears all custom kiosk parameters
 - **WHEN** 用户在携带 `kiosk=true&hide_all=true` 的页面按下 ESC 键退出 kiosk 模式

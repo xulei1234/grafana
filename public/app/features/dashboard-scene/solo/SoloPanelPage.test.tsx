@@ -8,7 +8,6 @@ import { DashboardScene } from '../scene/DashboardScene';
 import { DefaultGridLayoutManager } from '../scene/layout-default/DefaultGridLayoutManager';
 
 import { SoloPanelPage, SoloPanelRenderer, Props } from './SoloPanelPage';
-
 // Mock dependencies
 jest.mock('react-router-dom-v5-compat', () => ({
   useParams: jest.fn(),
@@ -21,6 +20,18 @@ jest.mock('../pages/DashboardScenePageStateManager', () => ({
 jest.mock('../scene/SoloPanelContext', () => ({
   SoloPanelContextProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   useDefineSoloPanelContext: jest.fn(() => ({})),
+}));
+
+// Allow tests to control useCustomKiosk output
+const mockUseCustomKiosk = jest.fn().mockReturnValue({
+  resolved: { hideKioskFooter: false },
+  raw: {},
+  context: {},
+});
+
+jest.mock('app/core/navigation/customKiosk', () => ({
+  useCustomKiosk: () => mockUseCustomKiosk(),
+  isKioskEnabled: jest.requireActual('app/core/navigation/customKiosk').isKioskEnabled,
 }));
 
 jest.mock('./SoloPanelPageLogo', () => ({
@@ -198,6 +209,22 @@ describe('SoloPanelPage', () => {
 
       const logo = screen.getByTestId('solo-panel-logo');
       expect(logo).toHaveAttribute('data-hovered', 'false');
+    });
+
+    it('hides logo when useCustomKiosk resolved.hideKioskFooter is true (e.g. ?hide_all=true)', () => {
+      mockUseCustomKiosk.mockReturnValueOnce({ resolved: { hideKioskFooter: true }, raw: {}, context: {} });
+      const dashboard = createMockDashboard();
+      render(<SoloPanelRenderer dashboard={dashboard} panelId="panel-1" hideLogo={undefined} />);
+
+      expect(screen.queryByTestId('solo-panel-logo')).not.toBeInTheDocument();
+    });
+
+    it('shows logo when useCustomKiosk resolved.hideKioskFooter is false and hideLogo prop is undefined', () => {
+      mockUseCustomKiosk.mockReturnValueOnce({ resolved: { hideKioskFooter: false }, raw: {}, context: {} });
+      const dashboard = createMockDashboard();
+      render(<SoloPanelRenderer dashboard={dashboard} panelId="panel-1" hideLogo={undefined} />);
+
+      expect(screen.getByTestId('solo-panel-logo')).toBeInTheDocument();
     });
   });
 });

@@ -35,6 +35,7 @@ import { Spec as DashboardV2Spec } from '@grafana/schema/apis/dashboard.grafana.
 import { appEvents } from 'app/core/app_events';
 import { ScrollRefElement } from 'app/core/components/NativeScrollbar';
 import { LS_PANEL_COPY_KEY, LS_STYLES_COPY_KEY } from 'app/core/constants';
+import { computeCustomKioskState } from 'app/core/navigation/customKiosk';
 import { getNavModel } from 'app/core/selectors/navModel';
 import { sortedDeepCloneWithoutNulls } from 'app/core/utils/object';
 import { getDashboardAPI } from 'app/features/dashboard/api/dashboard_api';
@@ -87,7 +88,6 @@ import { dashboardSceneGraph } from '../utils/dashboardSceneGraph';
 import { djb2Hash } from '../utils/djb2Hash';
 import { getDashboardUrl } from '../utils/getDashboardUrl';
 import { DashboardInteractions } from '../utils/interactions';
-import { computeCustomKioskState } from '../utils/useCustomKiosk';
 import {
   getClosestVizPanel,
   getDashboardSceneFor,
@@ -278,15 +278,30 @@ export class DashboardScene extends SceneObjectBase<DashboardSceneState> impleme
 
     // Custom kiosk: subscribe to URL changes and toggle panel menus based on hide_panel_menu param
     const savedMenus = new Map<string, VizPanelMenu | undefined>();
+    // Track the last applied value so that unrelated URL changes (e.g. time-range updates)
+    // don't trigger a full panel traversal when the hide_panel_menu flag hasn't changed.
+    let lastAppliedHidePanelMenu: boolean | undefined = undefined;
     const applyPanelMenuVisibility = (hidePanelMenu: boolean) => {
+      if (hidePanelMenu === lastAppliedHidePanelMenu) {
+        return;
+      }
+      // Nothing to do when menus were never hidden and we're not being asked to hide them.
+      // This short-circuit avoids traversing the scene tree (which can throw during transient
+      // states like row-repeat expansion) for the common case of no hide_panel_menu param.
+      if (!hidePanelMenu && savedMenus.size === 0) {
+        lastAppliedHidePanelMenu = hidePanelMenu;
+        return;
+      }
       let panels: VizPanel[];
       try {
         panels = dashboardSceneGraph.getVizPanels(this);
       } catch (e) {
         // Scene tree may not be fully constructed yet (e.g. during row repeat)
         console.warn('CustomKiosk: getVizPanels failed, will retry on next location change', e);
+        // Don't cache the failed state so we retry on the next URL change
         return;
       }
+      lastAppliedHidePanelMenu = hidePanelMenu;
       if (hidePanelMenu) {
         panels.forEach((panel) => {
           const key = panel.state.key ?? '';
@@ -299,7 +314,14 @@ export class DashboardScene extends SceneObjectBase<DashboardSceneState> impleme
         panels.forEach((panel) => {
           const key = panel.state.key ?? '';
           if (savedMenus.has(key)) {
-            panel.setState({ menu: savedMenus.get(key) });
+            // Only restore when the saved value is a real menu object.
+            // If the menu was undefined at save time (behavior-mounted menus may attach
+            // asynchronously after the first activation), skip the restore to avoid
+            // permanently overwriting a menu that has since been mounted.
+            const saved = savedMenus.get(key);
+            if (saved !== undefined) {
+              panel.setState({ menu: saved });
+            }
           }
         });
       }
