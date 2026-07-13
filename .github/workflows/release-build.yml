@@ -177,7 +177,7 @@ jobs:
             artifacts: targz:grafana:darwin/arm64:nocgo
             verify: true
     steps:
-      - uses: grafana/shared-workflows/actions/dockerhub-login@dockerhub-login/v1.0.2
+      - uses: grafana/shared-workflows/actions/dockerhub-login@dockerhub-login/v2.0.0
       - uses: grafana/shared-workflows/actions/login-to-gar@main
       - uses: actions/checkout@v5
         with:
@@ -235,7 +235,7 @@ jobs:
       - setup
       - build
     steps:
-      - uses: grafana/shared-workflows/actions/dockerhub-login@dockerhub-login/v1.0.2
+      - uses: grafana/shared-workflows/actions/dockerhub-login@dockerhub-login/v2.0.0
       - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
         with:
           name: artifacts-list-linux-amd64
