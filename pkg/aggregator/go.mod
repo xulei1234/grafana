@@ -17,7 +17,7 @@ require (
 	k8s.io/component-base v0.35.1
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-openapi v0.0.0-20260127142750-a19766b6e2d4
-	sigs.k8s.io/structured-merge-diff/v6 v6.3.2
+	sigs.k8s.io/structured-merge-diff/v6 v6.4.2
 )
 
 require (
